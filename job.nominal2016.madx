@@ -1,0 +1,62 @@
+option, -echo;
+call, file = "/afs/cern.ch/eng/sl/lintrack/Beta-Beat.src/madx/lib/beta_beat.macros.madx";
+call, file = "/afs/cern.ch/eng/sl/lintrack/Beta-Beat.src/madx/lib/lhc.macros.madx";
+option, echo;
+
+match_tunes_kqt(nqx, nqy, beam_number): macro = {
+    match;
+    vary, name=KQTD.Bbeam_number;
+    vary, name=KQTF.Bbeam_number;
+    GLOBAL, Q1= nqx, Q2=nqy;
+    lmdif, calls=2000, tolerance=1E-23;
+    endmatch;
+};
+! /afs/cern.ch/eng/lhc/optics/runII/2016
+
+do_twiss_elements_with_dipoles(use_sequence, output_file, dpp): macro = {
+    exec, select_elements();
+    twiss, chrom, sequence=use_sequence, deltap=dpp, file=output_file;
+};
+select_elements(): macro = {
+    select, flag=twiss, clear;
+    select, flag=twiss, class=monitor, column=name, s, betx, alfx, bety, alfy, 
+                                              mux, muy, dx, dy, dpx, dpy, x, y, k0l, k0,
+                                              k1l, k1sl, k2l, k3l, k4l, wx, wy, phix,
+                                              phiy, dmux, dmuy, keyword, dbx, dby,
+                                              r11, r12, r21, r22;
+    select, flag=twiss, class=monitor;
+    select, flag=twiss, class=quadrupole;
+    ! select, flag=twiss, class=skewquadrupole;
+    ! select, flag=twiss, class=sextupole;
+    select, flag=twiss, pattern = "^MB\..*";
+
+}
+
+
+call, file="/afs/cern.ch/eng/lhc/optics/V6.5/errors/Esubroutines.madx";
+option, -echo;
+call, file = "/afs/cern.ch/eng/sl/lintrack/Beta-Beat.src/model/accelerators/lhc/2016/main.seq";
+beam, sequence=LHCB1, particle=proton, energy=6500, kbunch=1, npart=1.15E11, bv=1;
+call, file = "./modifiers.madx";
+exec, cycle_sequences();
+use, period = LHCB1;
+option, echo;
+exec, match_tunes_kqt(64.28, 59.31, 1);
+! exec, do_twiss_elements_with_dipoles(LHCB1, "./b1_nominal_elements_with_dipoles.dat", 0.0);
+exec, do_twiss_monitors(LHCB1, "./b1_nominal_monitors.dat", 0.0);
+exec, do_twiss_elements(LHCB1, "./b1_nominal_elements.dat", 0.0);
+
+
+option, -echo;
+call, file = "/afs/cern.ch/eng/sl/lintrack/Beta-Beat.src/model/accelerators/lhc/2016/main.seq";
+beam, sequence=LHCB2, particle=proton, energy=6500, kbunch=1, npart=1.15E11, bv=-1;
+call, file = "./modifiers.madx";
+exec, cycle_sequences();
+use, period = LHCB2;
+option, echo;
+exec, match_tunes_kqt(64.28, 59.31, 2);
+! exec, do_twiss_elements_with_dipoles(LHCB2, "./b2_nominal_elements_with_dipoles.dat", 0.0);
+exec, do_twiss_monitors(LHCB2, "./b2_nominal_monitors.dat", 0.0);
+exec, do_twiss_elements(LHCB2, "./b2_nominal_elements.dat", 0.0);
+
+

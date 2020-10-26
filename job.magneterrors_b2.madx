@@ -1,0 +1,113 @@
+option, -echo;
+call, file = "/afs/cern.ch/eng/sl/lintrack/Beta-Beat.src/madx/lib/beta_beat.macros.madx";
+call, file = "/afs/cern.ch/eng/sl/lintrack/Beta-Beat.src/madx/lib/lhc.macros.madx";
+option, echo;
+
+match_tunes_kqt(nqx, nqy, beam_number): macro = {
+    match;
+    vary, name=KQTD.Bbeam_number;
+    vary, name=KQTF.Bbeam_number;
+    GLOBAL, Q1= nqx, Q2=nqy;
+    lmdif, calls=2000, tolerance=1E-23;
+    endmatch;
+};
+
+call, file="/afs/cern.ch/eng/lhc/optics/V6.5/errors/Esubroutines.madx";
+option, -echo;
+call, file = "/afs/cern.ch/eng/sl/lintrack/Beta-Beat.src/model/accelerators/lhc/2016/main.seq";
+beam, sequence=LHCB2, particle=proton, energy=6500, kbunch=1, npart=1.15E11, bv=-1;
+call, file = "%(OPTICS)s";
+exec, cycle_sequences();
+use, period = LHCB2;
+
+option, echo;
+exec, match_tunes_kqt(64.28, 59.31, 2);
+
+! generate individual errors for beam 2
+eoption, seed = %(SEED)s, add=true;
+ON_B2R = 1;
+GCUTR = 3; ! Cut for truncated gaussians (sigmas)
+
+!!!! Global errors !!!!
+select, flag=error, clear;
+select, flag=error, pattern = "^MQ\..*B2";
+Rr = 0.017;
+B2r = 19;
+exec, SetEfcomp_Q;
+
+select, flag=error, clear;
+select, flag=error, pattern = "^MQM[LC]\..*B2";
+Rr = 0.017;
+B2r = 12;
+exec, SetEfcomp_Q;
+
+select, flag=error, clear;
+select, flag=error, pattern = "^MQM\..*B2";
+Rr = 0.017;
+B2r = 12;
+exec, SetEfcomp_Q;
+
+select, flag=error, clear;
+select, flag=error, pattern = "^MQY\..*B2";
+Rr = 0.017; // to be checked
+! B2r = 8;
+B2r = 11;
+exec, SetEfcomp_Q;
+
+select, flag=error, clear;
+select, flag=error, pattern = "^MQW[AB]\..*B2";
+Rr = 0.017;
+B2r = 15;
+exec, SetEfcomp_Q;
+
+select, flag=error, clear;
+select, flag=error, pattern = "^MQW\..*B2";
+Rr = 0.017;
+B2r = 15;
+exec, SetEfcomp_Q;
+
+select, flag=error, clear;
+select, flag=error, pattern = "^MQT\..*B2";
+Rr = 0.017;
+B2r = 15;
+exec, SetEfcomp_Q;
+
+select, flag=error, clear;
+select, flag=error, pattern = "^MQTL[IH]\..*B2";
+Rr = 0.017;
+! B2r = 15;
+B2r = 75;
+exec, SetEfcomp_Q;
+
+select, flag=error, clear;
+READMYTABLE, file="./magnet_errors/common_errors_%(INDEX)s.tfs", table=errtab;
+SETERR, TABLE=errtab;
+
+! Add sextupole misalignments:
+! select, flag=error, clear;
+! SELECT, FLAG = ERROR, PATTERN = "^MS\..*B2$";
+! EALIGN, DX := 0.0003*TGAUSS(3);
+
+! Add quads longitudinal misalignments:
+! select, flag=error, clear;
+! select, flag=error, pattern = "^MQ[^I^S^D].*B2$";
+! EALIGN, DS := 0.006*TGAUSS(3);
+
+!Assign average dipole errors (best knowldge model)
+readmytable, file = "/afs/cern.ch/eng/sl/lintrack/error_tables/Beam2/error_tables_6.5TeV/MBx-0001.errors", table=errtab;
+seterr, table=errtab;
+
+select, flag=error, clear;
+select, flag=error, pattern = "^MQ[^B^I^S^D].*";
+esave, file="./magnet_errors/b2_errors_%(INDEX)s.tfs";
+
+exec, do_twiss_elements(LHCB2, "./magnet_errors/b2_twiss_before_match_%(INDEX)s.tfs", 0.0);
+exec, match_tunes_kqt(64.28, 59.31, 2);
+exec, do_twiss_elements(LHCB2, "./magnet_errors/b2_twiss_after_match_%(INDEX)s.tfs", 0.0);
+
+ndx := table(twiss,dx)/sqrt(table(twiss,betx));
+select, flag=twiss, clear;
+select, flag=twiss, pattern="^BPM.*B2$", column=name, s, betx, bety, ndx,
+                                              mux, muy;
+twiss, chrom, sequence=LHCB2, deltap=0.0, file="./magnet_errors/b2_twiss_%(INDEX)s.tfs";
+

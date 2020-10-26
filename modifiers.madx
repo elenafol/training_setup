@@ -1,0 +1,2 @@
+call file="/afs/cern.ch/eng/lhc/optics/runII/2016/opt_inj.madx";
+call file="/afs/cern.ch/eng/lhc/optics/runII/2016/opt_400_10000_400_3000.madx";
